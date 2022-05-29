@@ -7,6 +7,10 @@
         public string Link { get; set; }
         public string? Descciption { get; set; }
         public DateTime? LastBuildDate { get; set; }
-        public DateTime LastModified { get; set; }
+        public DateTime? LastModifiedHeader { get; set; }
+        public string? ETagHeader { get; set; }
+
+        public ICollection<FeedUser> Subscribers { get; set; }
+        public ICollection<Category> Categories { get; set; }
     }
 }
