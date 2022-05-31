@@ -14,6 +14,7 @@ namespace RssServiceApi.Entities
         public DbSet<Item> Items { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserFeed> UserFeeds { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -37,7 +38,7 @@ namespace RssServiceApi.Entities
                             x => x.HasOne<User>().WithMany().HasForeignKey("UsersId"));
 
             // Making a composite key for FeedUser table
-            modelBuilder.Entity<FeedUser>()
+            modelBuilder.Entity<UserFeed>()
                         .HasKey(x => new { x.UserId, x.FeedId });
         }
     }

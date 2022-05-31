@@ -10,7 +10,7 @@
         public DateTime? LastModifiedHeader { get; set; }
         public string? ETagHeader { get; set; }
 
-        public ICollection<FeedUser> Subscribers { get; set; }
+        public ICollection<UserFeed> Subscribers { get; set; }
         public ICollection<Category> Categories { get; set; }
     }
 }
