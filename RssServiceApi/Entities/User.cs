@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RssServiceApi.Entities
@@ -14,7 +15,9 @@ namespace RssServiceApi.Entities
         public string? Token { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public bool? IsConfirmed { get; set; }
+
+        [DefaultValue(false)]
+        public bool EmailConfirmed { get; set; }
 
         public ICollection<UserFeed> Subscriptions { get; set; }
 
