@@ -14,7 +14,7 @@ namespace RssServiceApi.Entities
         public string? Token { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public DateTime? ConfirmedAt { get; set; }
+        public bool? IsConfirmed { get; set; }
 
         public ICollection<UserFeed> Subscriptions { get; set; }
 
