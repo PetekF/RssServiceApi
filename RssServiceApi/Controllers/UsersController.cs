@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RssServiceApi.DTOs;
 using RssServiceApi.Entities;
 using RssServiceApi.RequestModels;
+using RssServiceApi.Services;
 
 namespace RssServiceApi.Controllers
 {
@@ -37,8 +38,6 @@ namespace RssServiceApi.Controllers
         [HttpPost]
         public ActionResult<UserDetailsDto> RegisterUser([FromBody]RegistrationCredentials credentials)
         {
-            // Check header for AppKey and make sure it matches the one in appsettings
-            // If request doesn't have that header return some error code
             if (!Request.Headers.ContainsKey("AppKey"))
             {
                 return BadRequest();
@@ -49,17 +48,21 @@ namespace RssServiceApi.Controllers
                 return BadRequest();
             }
 
-            // Save data from body to database
-            _dbCtx.Users.Add(new User() { 
-                Email = credentials.Email,
-                Password = credentials.Password,
-                FirstName = credentials.FirstName,
-                LastName = credentials.LastName
-            });
+            UserServices userServices = new UserServices(_dbCtx);
 
-            _dbCtx.SaveChanges();
+            try
+            {
+                userServices.RegisterUser(credentials);
+            }
+            catch (DbUpdateException e)
+            {
+                return BadRequest();
+            }
+            
 
-            return new UserDetailsDto();
+            UserDetailsDto user = userServices.GetUserDetailsByEmail(credentials.Email);
+
+            return user;
         }
 
         [HttpPut]
