@@ -5,7 +5,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace RssServiceApi.Entities
 {
     [Index(nameof(Email), IsUnique = true)]
-    [Index(nameof(EmailConfirmationKey), IsUnique = true)]
     public class User
     {
         public int Id { get; set; }
