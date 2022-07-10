@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using EntityFramework.Exceptions.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace RssServiceApi.Entities
 {
@@ -16,6 +17,10 @@ namespace RssServiceApi.Entities
         public DbSet<User> Users { get; set; }
         public DbSet<UserFeed> UserFeeds { get; set; }
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseExceptionProcessor();
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

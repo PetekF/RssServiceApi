@@ -13,10 +13,10 @@ namespace RssServiceApi.Entities
         public string Password { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public string EmailConfirmationKey { get; set; }
+        public string EmailVerificationKey { get; set; }
 
         [DefaultValue(false)]
-        public bool EmailConfirmed { get; set; }
+        public bool EmailVerified { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public ICollection<UserFeed> Subscriptions { get; set; }

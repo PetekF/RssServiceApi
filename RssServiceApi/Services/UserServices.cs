@@ -2,16 +2,26 @@
 using RssServiceApi.DTOs;
 using RssServiceApi.Entities;
 using RssServiceApi.RequestModels;
+using RssServiceApi.Exceptions;
+using EntityFramework.Exceptions.Common;
+using System.Net.Mail;
 
 namespace RssServiceApi.Services
 {
     public class UserServices
     {
-        protected RssDbContext _dbCtx;
+        private RssDbContext _dbCtx;
+        private IConfiguration? _config;
 
         public UserServices(RssDbContext dbCtx)
         {
             _dbCtx = dbCtx;
+        }
+
+        public UserServices(RssDbContext dbCtx, IConfiguration config)
+        {
+            _dbCtx = dbCtx;
+            _config = config;
         }
 
         public void RegisterUser(RegistrationCredentials credentials)
@@ -23,22 +33,69 @@ namespace RssServiceApi.Services
                 FirstName = credentials.FirstName,
                 LastName = credentials.LastName,
                 CreatedAt = DateTime.Now,
-                EmailConfirmationKey = GenerateEmailConfirmationKey()
+                EmailVerificationKey = GenerateEmailConfirmationKey()
             });
 
             try
             {
                 _dbCtx.SaveChanges();
             }
-            catch(DbUpdateException e)
+            catch(UniqueConstraintException e) when(e.InnerException.Message.Contains(nameof(User.Email)))
             {
-                throw e;
+                throw new UserAlreadyExistsException(credentials.Email);
+            }
+
+            if (_config.GetValue<bool>("Email:EmailVerificationEnabled") == true)
+            {
+                User user = _dbCtx.Users.First(u => u.Email == credentials.Email);
+                SendVerificationEmail(user);
             }
         }
 
         public UserDetailsDto GetUserDetailsByEmail(string email)
         {
-            UserDetailsDto user = _dbCtx.Users.Select(u => new UserDetailsDto()
+            IQueryable<UserDetailsDto> q = UserDetailsSelect();
+
+            UserDetailsDto user = q.Where(u => u.Email == email).First();
+
+            return user;
+        }
+
+        public UserDetailsDto GetUserDetailsById(int id)
+        {
+            IQueryable<UserDetailsDto> q = UserDetailsSelect();
+
+            UserDetailsDto user = q.Where(u => u.Id == id).First();
+
+            return user;
+        }
+
+        /// <exception cref="EmailVerificationException"></exception>
+        public void ValidateEmail (string key, User user)
+        {
+
+        }
+
+        // PRIVATE METHODS =========================================================
+        private string GenerateEmailConfirmationKey()
+        {
+            return "token";
+        }
+
+
+        private void SendVerificationEmail(User user)
+        {
+           if (user.EmailVerified == true)
+           {
+                return;
+           }
+
+           // Rest of code...
+        }
+
+        private IQueryable<UserDetailsDto> UserDetailsSelect()
+        {
+            return _dbCtx.Users.Select(u => new UserDetailsDto()
             {
                 Id = u.Id,
                 Email = u.Email,
@@ -53,26 +110,7 @@ namespace RssServiceApi.Services
                         Href = $"/users/{u.Id}"
                     }
                 }
-            }).Where(u => u.Email == email)
-              .First();
-
-            return user;
-        }
-
-        public UserDetailsDto GetUserDetails(int id)
-        {
-            return new UserDetailsDto() { };
-        }
-
-        public void ValidateEmail (string key, string email)
-        {
-            // confirm email of user that has this key
-        }
-
-        // PRIVATE METHODS
-        private string GenerateEmailConfirmationKey()
-        {
-            return "token";
+            });
         }
     }
 }

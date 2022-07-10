@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RssServiceApi.DTOs;
 using RssServiceApi.Entities;
+using RssServiceApi.Exceptions;
 using RssServiceApi.RequestModels;
 using RssServiceApi.Services;
 
@@ -35,8 +36,14 @@ namespace RssServiceApi.Controllers
             return Ok();
         }
 
+        [HttpGet("{id:int}")]
+        public IActionResult GetUser(int id)
+        {
+            return Ok();
+        }
+
         [HttpPost]
-        public ActionResult<UserDetailsDto> RegisterUser([FromBody]RegistrationCredentials credentials)
+        public IActionResult RegisterUser([FromBody]RegistrationCredentials credentials)
         {
             if (!Request.Headers.ContainsKey("AppKey"))
             {
@@ -48,26 +55,27 @@ namespace RssServiceApi.Controllers
                 return BadRequest();
             }
 
-            UserServices userServices = new UserServices(_dbCtx);
+            UserServices userServices = new UserServices(_dbCtx, _configuration);
 
             try
             {
                 userServices.RegisterUser(credentials);
             }
-            catch (DbUpdateException e)
+            catch (UserAlreadyExistsException e)
             {
-                return BadRequest();
+                // Change this to return error DTO!
+                return Conflict(e.Message);
             }
             
 
             UserDetailsDto user = userServices.GetUserDetailsByEmail(credentials.Email);
 
-            return user;
+            return Created($"/users/{user.Id}", user);
         }
 
         [HttpPut]
         [Route("{id}")]
-        public ActionResult<UserDetailsDto> EditUser()
+        public ActionResult<UserDetailsDto> EditUser(int id)
         {
             return Ok(new UserDetailsDto());
         }
