@@ -64,11 +64,24 @@ namespace RssServiceApi.Controllers
             catch (UserAlreadyExistsException e)
             {
                 // Change this to return error DTO!
-                return Conflict(e.Message);
+                ErrorDto errorDto = new ErrorDto()
+                {
+                    ErrorCode = 101,
+                    ErrorName = "User exists",
+                    Message = e.Message,
+                };
+
+                return Conflict(errorDto);
             }
             
 
             UserDetailsDto user = userServices.GetUserDetailsByEmail(credentials.Email);
+            user.Links.Add(new LinkDto()
+            {
+                Rel = "login",
+                Method = "post",
+                Href = "/login",
+            });
 
             return Created($"/users/{user.Id}", user);
         }
@@ -82,8 +95,11 @@ namespace RssServiceApi.Controllers
 
         [Route("/login")]
         [HttpPost]
-        public ActionResult<UserTokenDto> AuthenticateUser()
+        public ActionResult<UserTokenDto> AuthenticateUser([FromBody] LoginCredentials loginCredentials)
         {
+            UserServices userServices = new UserServices(_dbCtx, _configuration);
+            string? jwtToken = userServices.AuthenticateUser(loginCredentials);
+
             return Ok(new UserTokenDto() { Id = 1, Token = "sometopsecrettoken"});
         }
     }

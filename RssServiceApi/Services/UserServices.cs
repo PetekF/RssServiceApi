@@ -5,6 +5,8 @@ using RssServiceApi.RequestModels;
 using RssServiceApi.Exceptions;
 using EntityFramework.Exceptions.Common;
 using System.Net.Mail;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using System.Security.Cryptography;
 
 namespace RssServiceApi.Services
 {
@@ -26,10 +28,13 @@ namespace RssServiceApi.Services
 
         public void RegisterUser(RegistrationCredentials credentials)
         {
+            var passwordHash = HashPassword(credentials.Password);
+
             _dbCtx.Users.Add(new User()
             {
                 Email = credentials.Email,
-                Password = credentials.Password,
+                HashedPassword = passwordHash.hashedPassword,
+                HashSalt = passwordHash.saltBase64String,
                 FirstName = credentials.FirstName,
                 LastName = credentials.LastName,
                 CreatedAt = DateTime.Now,
@@ -70,6 +75,22 @@ namespace RssServiceApi.Services
             return user;
         }
 
+        public string? AuthenticateUser(LoginCredentials loginCredentials)
+        {
+            
+            User user = _dbCtx.Users.SingleOrDefault(u => u.Email == loginCredentials.Email);
+
+
+            if (user == null || user.HashedPassword != HashPassword(loginCredentials.Password, user.HashSalt))
+            {
+                return null;
+            }
+            
+
+
+            return "jwttoken";
+        }
+
         /// <exception cref="EmailVerificationException"></exception>
         public void ValidateEmail (string key, User user)
         {
@@ -77,6 +98,42 @@ namespace RssServiceApi.Services
         }
 
         // PRIVATE METHODS =========================================================
+
+        private (string hashedPassword, string saltBase64String) HashPassword(string password)
+        {
+            byte[] salt = new byte[128 / 8];
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetNonZeroBytes(salt);
+            }
+
+            string hashedPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+                password: password,
+                salt: salt,
+                prf: KeyDerivationPrf.HMACSHA256,
+                iterationCount: 10000,
+                numBytesRequested: 256 / 8));
+
+            string saltBase64String = Convert.ToBase64String(salt);
+
+            return (hashedPassword, saltBase64String);
+        }
+
+        private string HashPassword(string password, string saltBase64String)
+        {
+            byte[] salt = Convert.FromBase64String(saltBase64String);
+
+            string hashedPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+                password: password,
+                salt: salt,
+                prf: KeyDerivationPrf.HMACSHA256,
+                iterationCount: 10000,
+                numBytesRequested: 256 / 8));
+
+            return hashedPassword;
+        }
+
         private string GenerateEmailConfirmationKey()
         {
             return "token";
