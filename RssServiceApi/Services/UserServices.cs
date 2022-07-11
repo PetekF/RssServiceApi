@@ -7,6 +7,10 @@ using EntityFramework.Exceptions.Common;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using System.Security.Cryptography;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace RssServiceApi.Services
 {
@@ -75,20 +79,37 @@ namespace RssServiceApi.Services
             return user;
         }
 
+        public List<UserDto> GetUsers()
+        {
+            return _dbCtx.Users.Select(u =>
+
+                new UserDto()
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    Links = new List<LinkDto>()
+                    {
+                        new LinkDto()
+                        {
+                            Rel = "self",
+                            Method = "get",
+                            Href = $"/users/{u.Id}"
+                        }
+                    }
+                }).ToList();
+        }
+
         public string? AuthenticateUser(LoginCredentials loginCredentials)
         {
             
             User user = _dbCtx.Users.SingleOrDefault(u => u.Email == loginCredentials.Email);
-
 
             if (user == null || user.HashedPassword != HashPassword(loginCredentials.Password, user.HashSalt))
             {
                 return null;
             }
             
-
-
-            return "jwttoken";
+            return CreateJwtToken(user);
         }
 
         /// <exception cref="EmailVerificationException"></exception>
@@ -97,7 +118,32 @@ namespace RssServiceApi.Services
 
         }
 
+
         // PRIVATE METHODS =========================================================
+
+        private string CreateJwtToken(User user)
+        {
+            Claim[] claims = new Claim[]
+            {
+                new Claim(JwtRegisteredClaimNames.Iss, _config.GetValue<String>("Jwt:Issuer")),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString(), ClaimValueTypes.Integer32),
+                new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
+                new Claim(ClaimTypes.Role, "User"),
+                new Claim(ClaimTypes.Email, user.Email)
+            };
+
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
+            var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                _config["Jwt:Issuer"],
+                _config["Jwt:Audience"],
+                claims,
+                expires: DateTime.UtcNow.AddHours(8),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
 
         private (string hashedPassword, string saltBase64String) HashPassword(string password)
         {

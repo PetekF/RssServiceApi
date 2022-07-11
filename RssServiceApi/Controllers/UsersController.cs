@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RssServiceApi.DTOs;
@@ -9,6 +10,7 @@ using RssServiceApi.Services;
 
 namespace RssServiceApi.Controllers
 {
+    [Authorize]
     [Route("[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
@@ -24,9 +26,12 @@ namespace RssServiceApi.Controllers
         }
 
         [HttpGet]
-        public List<UserDto> GetUsers()
+        public IActionResult GetUsers()
         {
-            return new List<UserDto>();
+            var userServices = new UserServices(_dbCtx, _configuration);
+            var users = userServices.GetUsers();
+
+            return Ok(users);
         }
 
         [HttpGet]
@@ -42,6 +47,7 @@ namespace RssServiceApi.Controllers
             return Ok();
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public IActionResult RegisterUser([FromBody]RegistrationCredentials credentials)
         {
@@ -93,14 +99,31 @@ namespace RssServiceApi.Controllers
             return Ok(new UserDetailsDto());
         }
 
+        [AllowAnonymous]
         [Route("/login")]
         [HttpPost]
-        public ActionResult<UserTokenDto> AuthenticateUser([FromBody] LoginCredentials loginCredentials)
+        public IActionResult AuthenticateUser([FromBody] LoginCredentials loginCredentials)
         {
             UserServices userServices = new UserServices(_dbCtx, _configuration);
             string? jwtToken = userServices.AuthenticateUser(loginCredentials);
 
-            return Ok(new UserTokenDto() { Id = 1, Token = "sometopsecrettoken"});
+            if (jwtToken == null)
+            {
+                ErrorDto errorDto = new ErrorDto()
+                {
+                    ErrorCode = 102,
+                    ErrorName = "Login refused",
+                    Message = "Wrong email or password",
+                };
+
+                return Unauthorized(errorDto);
+            }
+
+            return Ok(new UserTokenDto()
+            {
+                TokenType = "JWT",
+                Token = jwtToken,
+            });
         }
     }
 }
