@@ -107,6 +107,19 @@ namespace RssServiceApi.Controllers
             UserServices userServices = new UserServices(_dbCtx, _configuration);
             string? jwtToken = userServices.AuthenticateUser(loginCredentials);
 
+            if (_configuration.GetValue<bool>("Email:EmailVerificationEnabled") && 
+                !userServices.IsVerified(loginCredentials.Email))
+            {
+                ErrorDto errorDto = new ErrorDto()
+                {
+                    ErrorCode = 103,
+                    ErrorName = "Not verified",
+                    Message = $"Email address {loginCredentials.Email} is not verified"
+                };
+
+                return Unauthorized(errorDto);
+            }
+
             if (jwtToken == null)
             {
                 ErrorDto errorDto = new ErrorDto()

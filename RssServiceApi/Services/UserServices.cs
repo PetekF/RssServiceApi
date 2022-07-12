@@ -102,7 +102,7 @@ namespace RssServiceApi.Services
         public string? AuthenticateUser(LoginCredentials loginCredentials)
         {
             
-            User user = _dbCtx.Users.SingleOrDefault(u => u.Email == loginCredentials.Email);
+            User? user = _dbCtx.Users.SingleOrDefault(u => u.Email == loginCredentials.Email);
 
             if (user == null || user.HashedPassword != HashPassword(loginCredentials.Password, user.HashSalt))
             {
@@ -113,9 +113,15 @@ namespace RssServiceApi.Services
         }
 
         /// <exception cref="EmailVerificationException"></exception>
-        public void ValidateEmail (string key, User user)
+        public void VerifyEmail (string key, User user)
         {
 
+        }
+
+        public bool IsVerified(string email)
+        {
+            bool isVerified = _dbCtx.Users.Any(u => u.Email == email && u.EmailVerified == true);
+            return isVerified;
         }
 
 
