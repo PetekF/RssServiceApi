@@ -61,22 +61,34 @@ namespace RssServiceApi.Services
             }
         }
 
-        public UserDetailsDto GetUserDetailsByEmail(string email)
+        public UserDetailsDto? GetUserDetailsByEmail(string email)
         {
             IQueryable<UserDetailsDto> q = UserDetailsSelect();
 
-            UserDetailsDto user = q.Where(u => u.Email == email).First();
-
-            return user;
+            try
+            {
+                UserDetailsDto user = q.Where(u => u.Email == email).First();
+                return user;
+            }
+            catch (InvalidOperationException e) when (e.Message == "Sequence contains no elements")
+            {
+                return null;
+            }
         }
 
-        public UserDetailsDto GetUserDetailsById(int id)
+        public UserDetailsDto? GetUserDetailsById(int id)
         {
             IQueryable<UserDetailsDto> q = UserDetailsSelect();
 
-            UserDetailsDto user = q.Where(u => u.Id == id).First();
-
-            return user;
+            try 
+            {
+                UserDetailsDto user = q.Where(u => u.Id == id).First();
+                return user;
+            }
+            catch (InvalidOperationException e) when(e.Message == "Sequence contains no elements")
+            {
+                return null;
+            }
         }
 
         public List<UserDto> GetUsers()
@@ -112,6 +124,37 @@ namespace RssServiceApi.Services
             return CreateJwtToken(user);
         }
 
+        public void EditUser(int id, EditUser editUser)
+        {
+            var user = _dbCtx.Users.Find(id);
+
+            if (editUser.Email != null)
+                user.Email = editUser.Email;
+
+            if (editUser.FirstName != null)
+                user.FirstName = editUser.FirstName;
+
+            if (editUser.LastName != null)
+                user.LastName = editUser.LastName;
+
+            if (editUser.Password != null)
+            {
+                var passwordHash = HashPassword(editUser.Password);
+
+                user.HashedPassword = passwordHash.hashedPassword;
+                user.HashSalt = passwordHash.saltBase64String;
+            }
+
+            try
+            {
+                _dbCtx.SaveChanges();
+            }
+            catch(Exception e)
+            {
+                throw e;
+            }
+        }
+
         /// <exception cref="EmailVerificationException"></exception>
         public void VerifyEmail (string key, User user)
         {
@@ -133,6 +176,7 @@ namespace RssServiceApi.Services
             {
                 new Claim(JwtRegisteredClaimNames.Iss, _config.GetValue<String>("Jwt:Issuer")),
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString(), ClaimValueTypes.Integer32),
+                //new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
                 new Claim(ClaimTypes.Role, "User"),
                 new Claim(ClaimTypes.Email, user.Email)

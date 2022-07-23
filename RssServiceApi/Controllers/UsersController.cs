@@ -7,6 +7,8 @@ using RssServiceApi.Entities;
 using RssServiceApi.Exceptions;
 using RssServiceApi.RequestModels;
 using RssServiceApi.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace RssServiceApi.Controllers
 {
@@ -39,13 +41,29 @@ namespace RssServiceApi.Controllers
         [Route("me")]
         public ActionResult<UserDetailsDto> GetAuthenticatedUser()
         {
-            return Ok();
+            int userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub));
+
+            var user = _userServices.GetUserDetailsById(userId);
+
+            if (user == null)
+            {
+                return NotFound("User doesn't exist");
+            }
+
+            return Ok(user);
         }
 
         [HttpGet("{id:int}")]
         public IActionResult GetUser(int id)
         {
-            return Ok();
+            var user = _userServices.GetUserDetailsById(id);
+
+            if (user == null)
+            {
+                return NotFound("User doesn't exist");
+            }
+
+            return Ok(user);
         }
 
         [AllowAnonymous]
@@ -54,12 +72,12 @@ namespace RssServiceApi.Controllers
         {
             if (!Request.Headers.ContainsKey("AppKey"))
             {
-                return BadRequest();
+                return BadRequest("AppKey header is missing");
             }
 
             if (Request.Headers["AppKey"] != _configuration["AppKey"])
             {
-                return BadRequest();
+                return BadRequest("AppKey header contains wrong value");
             }
 
             try
@@ -68,11 +86,11 @@ namespace RssServiceApi.Controllers
             }
             catch (UserAlreadyExistsException e)
             {
-                return Conflict();
+                return Conflict("User already exists");
             }
             
 
-            UserDetailsDto user = _userServices.GetUserDetailsByEmail(credentials.Email);
+            UserDetailsDto? user = _userServices.GetUserDetailsByEmail(credentials.Email);
             user.Links.Add(new LinkDto()
             {
                 Rel = "login",
@@ -85,9 +103,41 @@ namespace RssServiceApi.Controllers
 
         [HttpPut]
         [Route("{id}")]
-        public ActionResult<UserDetailsDto> EditUser(int id)
+        public IActionResult EditUser([FromRoute]int id, [FromBody]EditUser editUser)
         {
-            return Ok(new UserDetailsDto());
+            try
+            {
+                _userServices.EditUser(id, editUser);
+            }
+            catch(Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+            
+
+            var user = _userServices.GetUserDetailsById(id);
+
+            return Ok(user);
+        }
+
+        [HttpPut("me")]
+        public IActionResult EditAuthenticatedUser([FromBody]EditUser editUser)
+        {
+            int userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub));
+
+            try
+            {
+                _userServices.EditUser(userId, editUser);
+            }
+            catch(Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+            
+
+            var user = _userServices.GetUserDetailsById(userId);
+
+            return Ok(user);
         }
 
         [AllowAnonymous]
