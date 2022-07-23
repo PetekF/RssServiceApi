@@ -17,19 +17,20 @@ namespace RssServiceApi.Controllers
     {
         protected IConfiguration _configuration;
         protected RssDbContext _dbCtx;
+        private UserServices _userServices; 
 
         public UsersController(IConfiguration conf, RssDbContext dbCtx)
             :base()
         {
             _configuration = conf;
             _dbCtx = dbCtx;
+            _userServices = new UserServices(_dbCtx, _configuration);
         }
 
         [HttpGet]
         public IActionResult GetUsers()
         {
-            var userServices = new UserServices(_dbCtx, _configuration);
-            var users = userServices.GetUsers();
+            var users = _userServices.GetUsers();
 
             return Ok(users);
         }
@@ -61,11 +62,9 @@ namespace RssServiceApi.Controllers
                 return BadRequest();
             }
 
-            UserServices userServices = new UserServices(_dbCtx, _configuration);
-
             try
             {
-                userServices.RegisterUser(credentials);
+                _userServices.RegisterUser(credentials);
             }
             catch (UserAlreadyExistsException e)
             {
@@ -73,7 +72,7 @@ namespace RssServiceApi.Controllers
             }
             
 
-            UserDetailsDto user = userServices.GetUserDetailsByEmail(credentials.Email);
+            UserDetailsDto user = _userServices.GetUserDetailsByEmail(credentials.Email);
             user.Links.Add(new LinkDto()
             {
                 Rel = "login",
@@ -96,13 +95,12 @@ namespace RssServiceApi.Controllers
         [HttpPost]
         public IActionResult AuthenticateUser([FromBody] LoginCredentials loginCredentials)
         {
-            UserServices userServices = new UserServices(_dbCtx, _configuration);
-            string? jwtToken = userServices.AuthenticateUser(loginCredentials);
+            string? jwtToken = _userServices.AuthenticateUser(loginCredentials);
 
             if (_configuration.GetValue<bool>("Email:EmailVerificationEnabled") && 
-                !userServices.IsVerified(loginCredentials.Email))
+                !_userServices.IsVerified(loginCredentials.Email))
             {
-                return Unauthorized();
+                return Unauthorized($"Email {loginCredentials.Email} is not verified.");
             }
 
             if (jwtToken == null)
