@@ -69,15 +69,7 @@ namespace RssServiceApi.Controllers
             }
             catch (UserAlreadyExistsException e)
             {
-                // Change this to return error DTO!
-                ErrorDto errorDto = new ErrorDto()
-                {
-                    ErrorCode = 101,
-                    ErrorName = "User exists",
-                    Message = e.Message,
-                };
-
-                return Conflict(errorDto);
+                return Conflict();
             }
             
 
@@ -110,26 +102,12 @@ namespace RssServiceApi.Controllers
             if (_configuration.GetValue<bool>("Email:EmailVerificationEnabled") && 
                 !userServices.IsVerified(loginCredentials.Email))
             {
-                ErrorDto errorDto = new ErrorDto()
-                {
-                    ErrorCode = 103,
-                    ErrorName = "Not verified",
-                    Message = $"Email address {loginCredentials.Email} is not verified"
-                };
-
-                return Unauthorized(errorDto);
+                return Unauthorized();
             }
 
             if (jwtToken == null)
             {
-                ErrorDto errorDto = new ErrorDto()
-                {
-                    ErrorCode = 102,
-                    ErrorName = "Login refused",
-                    Message = "Wrong email or password",
-                };
-
-                return Unauthorized(errorDto);
+                return Unauthorized();
             }
 
             return Ok(new UserTokenDto()
