@@ -37,8 +37,7 @@ namespace RssServiceApi.Controllers
             return Ok(users);
         }
 
-        [HttpGet]
-        [Route("me")]
+        [HttpGet("me")]
         public ActionResult<UserDetailsDto> GetAuthenticatedUser()
         {
             int userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub));
@@ -101,8 +100,7 @@ namespace RssServiceApi.Controllers
             return Created($"/users/{user.Id}", user);
         }
 
-        [HttpPut]
-        [Route("{id}")]
+        [HttpPut("{id}")]
         public IActionResult EditUser([FromRoute]int id, [FromBody]EditUser editUser)
         {
             try
@@ -141,8 +139,7 @@ namespace RssServiceApi.Controllers
         }
 
         [AllowAnonymous]
-        [Route("/login")]
-        [HttpPost]
+        [HttpPost("login")]
         public IActionResult AuthenticateUser([FromBody] LoginCredentials loginCredentials)
         {
             string? jwtToken = _userServices.AuthenticateUser(loginCredentials);
