@@ -100,6 +100,7 @@ namespace RssServiceApi.Controllers
             return Created($"/users/{user.Id}", user);
         }
 
+        [Authorize(Roles = "Administrator")]
         [HttpPut("{id}")]
         public IActionResult EditUser([FromRoute]int id, [FromBody]EditUser editUser)
         {
