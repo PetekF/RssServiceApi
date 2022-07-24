@@ -7,6 +7,7 @@ using RssServiceApi.Entities;
 using RssServiceApi.Exceptions;
 using RssServiceApi.RequestModels;
 using RssServiceApi.Services;
+using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -19,14 +20,16 @@ namespace RssServiceApi.Controllers
     {
         protected IConfiguration _configuration;
         protected RssDbContext _dbCtx;
-        private UserServices _userServices; 
+        private UserServices _userServices;
+        private readonly IConnectionMultiplexer _redis;
 
-        public UsersController(IConfiguration conf, RssDbContext dbCtx)
+        public UsersController(IConfiguration conf, RssDbContext dbCtx, IConnectionMultiplexer redis)
             :base()
         {
             _configuration = conf;
             _dbCtx = dbCtx;
             _userServices = new UserServices(_dbCtx, _configuration);
+            _redis = redis;
         }
 
         [HttpGet]
@@ -161,6 +164,23 @@ namespace RssServiceApi.Controllers
                 TokenType = "JWT",
                 Token = jwtToken,
             });
+        }
+
+        [HttpPost("logout")]
+        public IActionResult LogoutAuthenticatedUser()
+        {
+            // Use Redis db to save JWT blacklist which will contain
+            // invalid tokens up to time of their expiry
+
+            var token = Request.Headers["Authorization"].ToString().Split(" ")[1];
+            var expiryTimestamp = User.FindFirstValue("exp");
+            var expiryTime = DateTimeOffset.FromUnixTimeSeconds(int.Parse(expiryTimestamp)).LocalDateTime;
+
+            var rdb = _redis.GetDatabase();
+            rdb.StringSet("test", "success");
+           
+
+            return Ok();
         }
     }
 }
