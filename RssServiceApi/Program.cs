@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using RssServiceApi.Entities;
+using RssServiceApi.Middleware;
 using StackExchange.Redis;
 using System.Text;
 
@@ -37,6 +38,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "RssApi_";
 });
 
+builder.Services.AddTransient<TokenBlacklistMiddleware>();
+
 var app = builder.Build();
 
 // FOR DEVELOPMENT PURPOSES ONLY, DELETE LATER
@@ -60,6 +63,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+
+app.UseMiddleware<TokenBlacklistMiddleware>();
 
 app.UseAuthorization();
 
