@@ -31,9 +31,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.MapInboundClaims = false;
     });
 
-//redis
-var multiplexer = ConnectionMultiplexer.Connect("localhost");
-builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.InstanceName = "RssApi_";
+});
 
 var app = builder.Build();
 

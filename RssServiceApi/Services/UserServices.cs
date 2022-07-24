@@ -176,7 +176,6 @@ namespace RssServiceApi.Services
             {
                 new Claim(JwtRegisteredClaimNames.Iss, _config.GetValue<String>("Jwt:Issuer")),
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString(), ClaimValueTypes.Integer32),
-                //new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
                 new Claim(ClaimTypes.Role, "User"),
                 new Claim(ClaimTypes.Email, user.Email)

@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using RssServiceApi.DTOs;
 using RssServiceApi.Entities;
 using RssServiceApi.Exceptions;
+using RssServiceApi.Extensions;
 using RssServiceApi.RequestModels;
 using RssServiceApi.Services;
 using StackExchange.Redis;
@@ -21,15 +23,16 @@ namespace RssServiceApi.Controllers
         protected IConfiguration _configuration;
         protected RssDbContext _dbCtx;
         private UserServices _userServices;
-        private readonly IConnectionMultiplexer _redis;
+        //private readonly IConnectionMultiplexer _redis;
+        private IDistributedCache _cache;
 
-        public UsersController(IConfiguration conf, RssDbContext dbCtx, IConnectionMultiplexer redis)
+        public UsersController(IConfiguration conf, RssDbContext dbCtx, IDistributedCache cache)
             :base()
         {
             _configuration = conf;
             _dbCtx = dbCtx;
             _userServices = new UserServices(_dbCtx, _configuration);
-            _redis = redis;
+            _cache = cache;
         }
 
         [HttpGet]
@@ -174,13 +177,17 @@ namespace RssServiceApi.Controllers
 
             var token = Request.Headers["Authorization"].ToString().Split(" ")[1];
             var expiryTimestamp = User.FindFirstValue("exp");
-            var expiryTime = DateTimeOffset.FromUnixTimeSeconds(int.Parse(expiryTimestamp)).LocalDateTime;
+            var expiryTime = DateTimeOffset.FromUnixTimeSeconds(int.Parse(expiryTimestamp));
 
-            var rdb = _redis.GetDatabase();
-            rdb.StringSet("test", "success");
-           
-
-            return Ok();
+            try
+            {
+                _cache.SetRecordAsync<string>($"bl_{token}", token, expiryTime);
+                return Ok();
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500);
+            }
         }
     }
 }
